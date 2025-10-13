@@ -1,7 +1,7 @@
 # Использование многостадийной сборки (Multi-stage build)
 
 # Этап 1: Сборка приложения
-FROM maven:3.8.7-openjdk-17-slim AS build
+FROM maven:3.8.7-openjdk-17-slim-bullseye AS build
 WORKDIR /app
 COPY pom.xml .
 # Кэширование зависимостей - запускаем mvn dependency:go-offline отдельно
@@ -16,16 +16,3 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
-
-# Дополнительно: Добавьте .dockerignore
-# Создайте файл .dockerignore в корне проекта со следующим содержимым:
-# target/
-# .mvn/
-# .idea/
-# *.iml
-# mvnw
-# mvnw.cmd
-# Dockerfile
-# README.md
-# .git/
-# .github/
