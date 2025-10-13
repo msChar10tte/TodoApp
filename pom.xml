@@ -6,7 +6,7 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.2.5</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <relativePath/>
     </parent>
     <groupId>ru.netology</groupId>
     <artifactId>TodoApp</artifactId>
@@ -19,13 +19,11 @@
         <maven.compiler.target>17</maven.compiler.target>
     </properties>
     <dependencies>
-        <!-- Spring Web для REST API -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Spring Boot DevTools для удобства разработки -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
@@ -33,25 +31,20 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Lombok для генерации бойлерплейт-кода -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-<!--            <optional>true</optiona>-->
         </dependency>
 
-        <!-- Spring Boot Starter Validation для валидации входных данных -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- Spring Boot Starter Test для тестирования (включает JUnit 5, Mockito, AssertJ, Hamcrest) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
-            <!-- Исключаем JUnit 4 (vintage engine), если используем JUnit 5 -->
             <exclusions>
                 <exclusion>
                     <groupId>org.junit.vintage</groupId>
@@ -60,28 +53,6 @@
             </exclusions>
         </dependency>
 
-        <!-- spring-security-test добавлять только если вы используете Spring Security в приложении -->
-        <!-- <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
-            <scope>test</scope>
-        </dependency> -->
-
-        <!-- Hamcrest уже включен в spring-boot-starter-test, явно указывать нет нужды, если не нужна специфичная версия -->
-        <!-- <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest</artifactId>
-            <version>2.2</version>
-            <scope>test</scope>
-        </dependency> -->
-
-        <!-- JaCoCo используется как плагин, не как прямая зависимость -->
-        <!-- <dependency>
-            <groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.8.11</version>
-            <scope>test</scope>
-        </dependency> -->
 
     </dependencies>
 
@@ -90,18 +61,8 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <!-- Закомментированный блок configuration был пустым, его можно удалить -->
-                <!-- <configuration>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
-                </configuration> -->
             </plugin>
 
-            <!-- Плагин JaCoCo для отчетов по покрытию кода -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
@@ -119,7 +80,6 @@
                             <goal>report</goal>
                         </goals>
                     </execution>
-                    <!-- Обязательная проверка покрытия. Временно снижены пороги. -->
                     <execution>
                         <id>jacoco-check</id>
                         <goals>
@@ -133,12 +93,12 @@
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.10</minimum> <!-- Временно снижено до 10% -->
+                                            <minimum>0.10</minimum>
                                         </limit>
                                         <limit>
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.00</minimum> <!-- Временно снижено до 0% -->
+                                            <minimum>0.00</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
