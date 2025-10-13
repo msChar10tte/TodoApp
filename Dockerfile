@@ -1,7 +1,7 @@
 # Использование многостадийной сборки (Multi-stage build)
 
 # Этап 1: Сборка приложения
-FROM maven:3.8.7-openjdk-17-slim-bullseye AS build
+FROM maven:3-openjdk-17-slim-bullseye AS build
 WORKDIR /app
 COPY pom.xml .
 # Кэширование зависимостей - запускаем mvn dependency:go-offline отдельно
