@@ -50,21 +50,19 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: build-and-push-docker # Этот job зависит от успешного завершения предыдущего
-    environment: production # Опционально: можно использовать окружения GitHub Actions
+    needs: build-and-push-docker
+    environment: production
     env:
-      # Замените на реальные данные вашей ВМ
-      VM_HOST: your_vm_ip_address # IP адрес вашей ВМ
-      VM_USER: your_ssh_username # Имя пользователя для SSH
       IMAGE_NAME: todoapp
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }} # Ваш Docker Hub логин
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
 
     steps:
       - name: Deploy to VM
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ env.VM_HOST }}
-          username: ${{ env.VM_USER }}
+
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             echo "Logging into Docker Hub on VM..."
