@@ -13,8 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IMAGE_NAME: todoapp
-      # DOCKER_REGISTRY: docker.io # <--- Удаляем, так как пушим в GCR
-      GCP_PROJECT_ID: your-gcp-project-id  # <--- Добавляем Project ID для GCR
+      GCP_PROJECT_ID: neat-tempo-318416
 
     steps:
       - name: Checkout code
@@ -46,7 +45,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}:latest # <--- Пушим в GCR
+          tags: gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}:latest
 
       - name: Notify on build and push result
         run: echo "Docker image build and push to GCR completed successfully!"
@@ -57,9 +56,9 @@ jobs:
     environment: production
     env:
       IMAGE_NAME: todoapp
-      GCP_PROJECT_ID: your-gcp-project-id  # <--- Вставьте сюда ID вашего Google Cloud проекта
-      GCP_REGION: us-central1             # <--- Выберите подходящий регион Cloud Run
-      CLOUD_RUN_SERVICE_NAME: todoapp-service # <--- Название вашего сервиса Cloud Run
+      GCP_PROJECT_ID: neat-tempo-318416
+      GCP_REGION: us-central1
+      CLOUD_RUN_SERVICE_NAME: todoapp-service
 
     steps:
       - name: Checkout code
