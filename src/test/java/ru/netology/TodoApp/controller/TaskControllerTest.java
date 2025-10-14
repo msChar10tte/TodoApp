@@ -25,23 +25,10 @@ public class TaskControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    // В данном случае, поскольку TaskService хранит данные в памяти,
-    // он будет очищаться при каждом запуске теста @SpringBootTest.
-    // Если бы мы использовали БД, могли бы использовать @BeforeEach для очистки.
-
     @BeforeEach
     void setUp() throws Exception {
-        // Очистка всех задач перед каждым тестом, чтобы обеспечить изоляцию.
-        // Поскольку у нас нет прямого доступа к TaskService для очистки,
-        // мы можем удалить все задачи через API.
-        mockMvc.perform(delete("/tasks/1")); // Удаляем задачу 1, если она есть
-        mockMvc.perform(delete("/tasks/2")); // Удаляем задачу 2, если она есть
-        // Это не идеальный способ, т.к. мы зависим от ID, которые генерирует сервис.
-        // Более правильный подход для тестов в памяти - это иметь возможность
-        // очищать TaskService напрямую или мокать его.
-        // Для этого примера, давайте предположим, что каждый тест будет работать
-        // с новым набором ID, начинающимся с 1.
-        // Если бы TaskService был @Autowired здесь, мы бы делали taskService.clear();
+        mockMvc.perform(delete("/tasks/1"));
+        mockMvc.perform(delete("/tasks/2"));
     }
 
 
@@ -60,21 +47,19 @@ public class TaskControllerTest {
 
     @Test
     void shouldReturnAllTasks() throws Exception {
-        // Создадим несколько задач для теста
         mockMvc.perform(post("/tasks").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(new Task("Задача 1"))));
         mockMvc.perform(post("/tasks").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(new Task("Задача 2"))));
 
         mockMvc.perform(get("/tasks"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2))) // Ожидаем 2 задачи
+                .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].description", is("Задача 1")))
                 .andExpect(jsonPath("$[1].description", is("Задача 2")));
     }
 
     @Test
     void shouldUpdateTask() throws Exception {
-        // Сначала создадим задачу
-        String response = mockMvc.perform(post("/tasks")
+       String response = mockMvc.perform(post("/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new Task("Исходная задача"))))
                 .andExpect(status().isCreated())
@@ -83,7 +68,6 @@ public class TaskControllerTest {
         Task createdTask = objectMapper.readValue(response, Task.class);
         Long taskId = createdTask.getId();
 
-        // Затем обновим ее
         Task updatedTask = new Task("Обновленная задача");
         updatedTask.setCompleted(true);
 
@@ -101,7 +85,7 @@ public class TaskControllerTest {
         Task updatedTask = new Task("Несуществующая задача");
         updatedTask.setCompleted(true);
 
-        mockMvc.perform(put("/tasks/999") // ID, которого точно нет
+        mockMvc.perform(put("/tasks/999")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updatedTask)))
                 .andExpect(status().isNotFound());
@@ -109,7 +93,6 @@ public class TaskControllerTest {
 
     @Test
     void shouldDeleteTask() throws Exception {
-        // Сначала создадим задачу
         String response = mockMvc.perform(post("/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new Task("Задача для удаления"))))
@@ -119,24 +102,22 @@ public class TaskControllerTest {
         Task createdTask = objectMapper.readValue(response, Task.class);
         Long taskId = createdTask.getId();
 
-        // Затем удалим ее
         mockMvc.perform(delete("/tasks/" + taskId))
                 .andExpect(status().isNoContent());
 
-        // Проверим, что задача действительно удалена
         mockMvc.perform(get("/tasks/" + taskId))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void shouldReturnNotFoundWhenDeletingNonExistingTask() throws Exception {
-        mockMvc.perform(delete("/tasks/999")) // ID, которого точно нет
+        mockMvc.perform(delete("/tasks/999"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void shouldReturnBadRequestForInvalidTaskCreation() throws Exception {
-        Task invalidTask = new Task(""); // Пустое описание
+        Task invalidTask = new Task("");
         mockMvc.perform(post("/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidTask)))
@@ -146,7 +127,6 @@ public class TaskControllerTest {
 
     @Test
     void shouldReturnBadRequestForInvalidTaskUpdate() throws Exception {
-        // Сначала создадим задачу
         String response = mockMvc.perform(post("/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new Task("Valid Task"))))
@@ -156,7 +136,7 @@ public class TaskControllerTest {
         Task createdTask = objectMapper.readValue(response, Task.class);
         Long taskId = createdTask.getId();
 
-        Task invalidTask = new Task(""); // Пустое описание
+        Task invalidTask = new Task("");
         mockMvc.perform(put("/tasks/" + taskId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidTask)))
