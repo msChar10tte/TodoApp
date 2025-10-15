@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: self-hosted # Используем твой self-hosted раннер для этого этапа
+    runs-on: self-hosted # !!! ИСПОЛЬЗУЕМ SELF-HOSTED РАННЕР
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -22,25 +22,23 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build with Maven and Run Tests
-        # Запускаем фазу 'verify', которая включает компиляцию и выполнение тестов
-        run: mvn -B verify --file pom.xml
+      - name: Build with Maven and Run Tests # !!! ВЫПОЛНЯЕМ ТЕСТЫ
+        run: mvn -B verify --file pom.xml # 'verify' включает фазу 'test'
 
       - name: Upload JAR as artifact
         uses: actions/upload-artifact@v3
         with:
           name: todoapp-jar
-          path: target/*.jar # Убедись, что путь к JAR корректен (например, target/todoapp-0.0.1-SNAPSHOT.jar)
+          path: target/*.jar # Убедись, что путь к JAR корректен
 
       - name: Notify on build and test result
         run: echo "Build and tests completed successfully!"
 
   build-and-push-docker:
-    runs-on: self-hosted # Используем твой self-hosted раннер
+    runs-on: self-hosted # !!! ИСПОЛЬЗУЕМ SELF-HOSTED РАННЕР
     needs: build-and-test # Зависит от успешной сборки и тестов
     env:
       IMAGE_NAME: todoapp
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }} # Твой логин в Docker Hub
 
     steps:
       - name: Checkout code
@@ -55,12 +53,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # --- Аутентификация в Docker Hub ---
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }} # Секрет с паролем/токеном Docker Hub
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push Docker image to Docker Hub
         uses: docker/build-push-action@v5
@@ -73,19 +70,20 @@ jobs:
         run: echo "Docker image build and push to Docker Hub completed successfully!"
 
   deploy:
-    runs-on: self-hosted # Используем твой self-hosted раннер
-    needs: build-and-push-docker # Зависит от успешной сборки и пуша Docker-образа
-    environment: production # Используем окружение GitHub для защиты деплоя
+    runs-on: self-hosted
+    needs: build-and-push-docker
+    environment: production
     env:
       IMAGE_NAME: todoapp
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }} # Твой логин в Docker Hub
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
 
     steps:
       - name: Notify about deployment start
         run: echo "Deployment process started on self-hosted runner..."
 
-      # --- Аутентификация в Docker Hub для docker pull на раннере ---
-      - name: Login to Docker Hub (for docker pull on runner)
+      # --- Аутентификация в Docker Hub для docker pull ---
+      # Это нужно, так как каждая Job запускается в чистом окружении
+      - name: Login to Docker Hub (for docker pull)
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -94,21 +92,22 @@ jobs:
       - name: Deploy Docker image on self-hosted runner
         run: |
           echo "Pulling latest Docker image from Docker Hub..."
-          docker pull ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          docker pull ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
 
           echo "Stopping and removing existing container (if any)..."
-          if [ "$(docker ps -q -f name=${{ env.IMAGE_NAME }})" ]; then
-            docker stop ${{ env.IMAGE_NAME }}
-            docker rm ${{ env.IMAGE_NAME }}
-          fi
+          # Используем || true, чтобы команда не упала, если контейнер не существует
+          docker stop ${{ env.IMAGE_NAME }} || true
+          docker rm ${{ env.IMAGE_NAME }} || true
 
           echo "Running new Docker container..."
           docker run -d \
             --name ${{ env.IMAGE_NAME }} \
-            -p 8080:8080 \
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+            -p 80:8080 \
+            ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
 
-          echo "Deployment to self-hosted runner completed successfully! Check http://<IP_адрес_твоей_ВМ>:8080/tasks"
+          echo "Checking container status..."
+          docker ps -a
+          echo "Deployment complete! Check http://<IP_адрес_твоей_ВМ>:80/tasks" # Обновил порт в URL
 
       - name: Notify on deployment result
         run: echo "Deployment completed successfully!"
