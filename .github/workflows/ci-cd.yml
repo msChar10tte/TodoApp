@@ -9,12 +9,8 @@ on:
       - master
 
 jobs:
-  build-and-push-docker:
-    runs-on: ubuntu-latest
-    env:
-      IMAGE_NAME: todoapp
-      GCP_PROJECT_ID: neat-tempo-318416
-
+  build-and-test:
+    runs-on: self-hosted # Используем твой self-hosted раннер для этого этапа
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -26,60 +22,93 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build with Maven and skip tests
-        run: mvn -B package -DskipTests --file pom.xml
+      - name: Build with Maven and Run Tests
+        # Запускаем фазу 'verify', которая включает компиляцию и выполнение тестов
+        run: mvn -B verify --file pom.xml
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Google Cloud Authenticate for GCR
-        uses: google-github-actions/auth@v1
+      - name: Upload JAR as artifact
+        uses: actions/upload-artifact@v3
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          name: todoapp-jar
+          path: target/*.jar # Убедись, что путь к JAR корректен (например, target/todoapp-0.0.1-SNAPSHOT.jar)
 
-      - name: Configure Docker to use GCR
-        run: gcloud auth configure-docker
+      - name: Notify on build and test result
+        run: echo "Build and tests completed successfully!"
 
-      - name: Build and push Docker image to GCR
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}:latest
-
-      - name: Notify on build and push result
-        run: echo "Docker image build and push to GCR completed successfully!"
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-and-push-docker
-    environment: production
+  build-and-push-docker:
+    runs-on: self-hosted # Используем твой self-hosted раннер
+    needs: build-and-test # Зависит от успешной сборки и тестов
     env:
       IMAGE_NAME: todoapp
-      GCP_PROJECT_ID: neat-tempo-318416
-      GCP_REGION: us-central1
-      CLOUD_RUN_SERVICE_NAME: todoapp-service
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }} # Твой логин в Docker Hub
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Google Cloud Authenticate
-        uses: google-github-actions/auth@v1
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v3
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          name: todoapp-jar
+          path: target/ # Скачиваем JAR в папку target/
 
-      - name: Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Deploy to Google Cloud Run
+      # --- Аутентификация в Docker Hub ---
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }} # Секрет с паролем/токеном Docker Hub
+
+      - name: Build and push Docker image to Docker Hub
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest # Тэг для Docker Hub
+
+      - name: Notify on Docker image build and push result
+        run: echo "Docker image build and push to Docker Hub completed successfully!"
+
+  deploy:
+    runs-on: self-hosted # Используем твой self-hosted раннер
+    needs: build-and-push-docker # Зависит от успешной сборки и пуша Docker-образа
+    environment: production # Используем окружение GitHub для защиты деплоя
+    env:
+      IMAGE_NAME: todoapp
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }} # Твой логин в Docker Hub
+
+    steps:
+      - name: Notify about deployment start
+        run: echo "Deployment process started on self-hosted runner..."
+
+      # --- Аутентификация в Docker Hub для docker pull на раннере ---
+      - name: Login to Docker Hub (for docker pull on runner)
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Deploy Docker image on self-hosted runner
         run: |
-          gcloud run deploy ${{ env.CLOUD_RUN_SERVICE_NAME }} \
-            --image gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}:latest \
-            --platform managed \
-            --region ${{ env.GCP_REGION }} \
-            --allow-unauthenticated \
-            --project ${{ env.GCP_PROJECT_ID }}
+          echo "Pulling latest Docker image from Docker Hub..."
+          docker pull ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+
+          echo "Stopping and removing existing container (if any)..."
+          if [ "$(docker ps -q -f name=${{ env.IMAGE_NAME }})" ]; then
+            docker stop ${{ env.IMAGE_NAME }}
+            docker rm ${{ env.IMAGE_NAME }}
+          fi
+
+          echo "Running new Docker container..."
+          docker run -d \
+            --name ${{ env.IMAGE_NAME }} \
+            -p 8080:8080 \
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+
+          echo "Deployment to self-hosted runner completed successfully! Check http://<IP_адрес_твоей_ВМ>:8080/tasks"
 
       - name: Notify on deployment result
-        run: echo "Deployment to Google Cloud Run completed successfully!"
+        run: echo "Deployment completed successfully!"
