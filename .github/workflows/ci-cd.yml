@@ -102,7 +102,7 @@ jobs:
           echo "Running new Docker container..."
           docker run -d \
             --name ${{ env.IMAGE_NAME }} \
-            -p 80:8080 \
+            -p 8080:80 \
             ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
 
           echo "Checking container status..."
